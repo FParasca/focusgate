@@ -1,0 +1,14 @@
+{
+  "allowed": [
+    "Code.exe",
+    "firefox.exe",
+    "Notepad.exe",
+    "WindowsTerminal.exe",
+    "cmd.exe",
+    "powershell.exe",
+    "git-cmd.exe",
+    "python.exe",
+    "conhost.exe",
+    "AnythingLLM.exe"
+  ]
+}
