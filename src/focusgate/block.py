@@ -2,7 +2,9 @@ import argparse
 import sys
 import time
 import psutil
-from app.classifier import classify_all
+from focusgate.classifier import classify_all
+from focusgate.state import get_current_mode
+from focusgate.constants import MODE_WORK
 
 CHECK_INTERVAL_SECONDS = 2
 TERMINATE_TIMEOUT_SECONDS = 3.0
@@ -36,9 +38,19 @@ def terminate_processes(targets: list[dict]):
             pass
 
 
-def main():
+def run_blocker():
+    print("FocusGate Blocker started.")
+    
+    if get_current_mode() != MODE_WORK:
+        print("Mode 'free' detected. The blocker will shut down.")
+        sys.exit(0)
+
     try:
         while 1:
+            if get_current_mode() != MODE_WORK:
+                print("Change to 'free' mode detected. The blocker will shut down.")
+                break
+
             groups = classify_all()
             to_block = groups.get("BLOCK", [])
             if to_block:
@@ -50,6 +62,3 @@ def main():
     except KeyboardInterrupt:
         print("Interrupted by user.")
         sys.exit(0)
-
-if __name__ == "__main__":
-    main()

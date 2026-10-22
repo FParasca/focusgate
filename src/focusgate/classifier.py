@@ -2,9 +2,10 @@ import json
 import os
 from pathlib import Path
 import psutil
+from focusgate.constants import ALLOWLIST_FILE, CRITICAL_WINDOWS_PROCESSES
 
 PATH = Path(__file__).resolve().parent.parent
-CONFIG_PATH = PATH / "config" / "allowlist.json"
+CONFIG_PATH = ALLOWLIST_FILE
 
 SISTEM_FILES = (
     "c:\\windows\\",
@@ -20,11 +21,14 @@ def in_sistem(exe: str | None):
 
 def load_config(path: Path = CONFIG_PATH):
     if not path.exists():
-        raise FileNotFoundError(f"Not in {path}")
-    with open(path, encoding="utf-8") as f:
-        dados = json.load(f)
-    allowed = {n.lower() for n in dados.get("allowed", [])}
-    return allowed
+        return set()
+    try:
+        with open(path, encoding="utf-8") as f:
+            dados = json.load(f)
+        allowed = {n.lower() for n in dados.get("allowed", [])}
+        return allowed
+    except (json.JSONDecodeError, OSError):
+        return set()
 
 
 def get_protected_pids():
@@ -54,11 +58,13 @@ def process_classify(p: psutil.Process, allowed: set[str], protected_pids: set[i
         nome = (p.info.get("name") or "").lower()
         exe = p.info.get("exe")
     except (psutil.NoSuchProcess, psutil.AccessDenied):
-        return "SISTEMA"
+        return "SYSTEM"
 
     if pid in protected_pids:
         return "SYSTEM"
     if in_sistem(exe):
+        return "SYSTEM"
+    if nome in {c.lower() for c in CRITICAL_WINDOWS_PROCESSES}:
         return "SYSTEM"
     if nome in allowed:
         return "ALLOWED"
@@ -71,7 +77,7 @@ def classify_all():
     allowed = load_config()
     protected_pids = get_protected_pids()
 
-    categorias = ("SYSTEM", "SYSTEM", "ALLOWED", "BLOCK")
+    categorias = ("SYSTEM", "ALLOWED", "BLOCK")
     grupos = {c: [] for c in categorias}
 
     for p in psutil.process_iter(["pid", "name", "exe"]):
